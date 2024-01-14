@@ -1,6 +1,12 @@
-﻿#include "Core.h"
+﻿#include "core.h"
 
-int main(int argc, char* argv[]) {
+__global__ void init_kernel() {
+	if (threadIdx.x != 0 || blockIdx.x != 0) return;
+
+
+}
+
+__host__ int main(int argc, char* argv[]) {
 	int height_parameter = 0;
 	int ratio_parameter = 0;
 	//Handle command line arguments
@@ -54,3 +60,14 @@ int main(int argc, char* argv[]) {
 			}
 		}
 	}
+
+	output_file.open(filename + ".ppm");
+	if (!output_file.is_open()) {
+		std::cerr << "Error: " << filename << ".ppm" << " could not be opened/created." << std::endl;
+		return 1;
+	}
+
+	init_kernel <<<1, 1 >>> ();
+
+	return 0;
+}
