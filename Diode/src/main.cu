@@ -1,10 +1,21 @@
 ﻿#include "core.h"
+#include "render.cuh"
 #include "camera.h"
 
-__device__ camera* d_cam;
-__device__ object* global_objects;
-__device__ color_255* d_result;
-#define NUM_OBJECTS 3
+#define cudaAssert(ans) { gpuAssert((ans), __FILE__, __LINE__); }
+inline void gpuAssert(cudaError_t code, const char* file, int line, bool abort = true) {
+	if (code != cudaSuccess) {
+		while((code = cudaGetLastError()) != cudaSuccess)fprintf(stderr, "[CUDA ASSERT]: %s %s %d\n", cudaGetErrorString(code), file, line);
+		if (abort) exit(code);
+	}
+}
+
+#define checkKernelErrors\
+	err = cudaGetLastError();\
+	if (err != cudaSuccess) {\
+		std::cerr << cudaGetErrorString(err) << std::endl;\
+		goto cleanup;\
+	}\
 
 __global__ void init_kernel(time_t random_seed, int height, int width, double aspect_ratio) {
 	if (threadIdx.x != 0 || blockIdx.x != 0) return;
@@ -12,7 +23,7 @@ __global__ void init_kernel(time_t random_seed, int height, int width, double as
 	//create rng engine
 	rng = new thrust::minstd_rand((uint32_t) random_seed);
 	random = new thrust::uniform_real_distribution<float>(0.0f, 1.0f);
-	printf("RNG Engine initialized\n");
+	printf("[Diode] RNG Engine initialized\n");
 
 	//set up camera
 	d_cam = new camera;
@@ -25,27 +36,27 @@ __global__ void init_kernel(time_t random_seed, int height, int width, double as
 	d_cam->lookat = point3(0, 0, 0);
 	d_cam->aspect_ratio = aspect_ratio;
 	d_cam->initialize();
-	printf("Camera initialized\n");
+	printf("[Diode] Camera initialized\n");
 
 	//create the global objects
-	global_objects = new object[3]{
+	d_global_objects = new object [3] {
 		object(vec3(0.5f, 0.5f, 0.5f), vec3(0.0, -100.5, 0), material::lamertian, shape::sphere, 100.0f),
 		object(vec3(0.5f, 0.5f, 0.5f), vec3(-1.0, 0.5, 0), material::lamertian, shape::sphere, 0.5f),
 		object(vec3(0.5f, 0.5f, 0.5f), vec3(1.0, 0.0, 0), material::metal, shape::sphere, 0.6f)
 	};
-	printf("Global objects initialized\n");
 
-	d_result = new color_255[d_cam->image_height * d_cam->image_width];
-	printf("Result array initialized\n");
+	
 
-	printf("Successful initialization!\n");
+	printf("[Diode] Global objects initialized\n");
+
+	printf("[Diode] Successful initialization!\n");
 }
 
 __global__ void cleanup_kernel() {
 	delete rng;
 	delete random;
 	delete d_cam;
-	delete[] global_objects;
+	delete[] d_global_objects;
 
 	printf("Successful clean up!\n");
 } 
@@ -120,7 +131,7 @@ __host__ int main(int argc, char* argv[]) {
 
 	output_file.open(filename + ".ppm");
 	if (!output_file.is_open()) {
-		std::cerr << "Error: " << filename << ".ppm" << " could not be opened/created." << std::endl;
+		std::cerr << "[Diode Error] " << filename << ".ppm" << " could not be opened/created." << std::endl;
 		return 1;
 	}
 	
@@ -129,6 +140,8 @@ __host__ int main(int argc, char* argv[]) {
 	//       Initialization       //
 	//                            //
 	////////////////////////////////
+
+	cudaError_t err;
 
 	int height = (height_parameter > 0) ? height_parameter : camera::DEFAULT_HEIGHT;
 	double aspect_ratio;
@@ -154,26 +167,51 @@ __host__ int main(int argc, char* argv[]) {
 	const int num_pixels = height * width;
 
 	init_kernel<<<1,1>>> (time(nullptr), height, width, aspect_ratio);
+	cudaAssert(cudaDeviceSynchronize());
+	checkKernelErrors
 
-	color_255* h_result = new color_255[num_pixels];
-	CHKALLOC(h_result, num_pixels * sizeof(color_255));
+	color255* h_result = nullptr;
+	cudaAssert(cudaMallocHost(&h_result, sizeof(color255) * num_pixels));
+
+	color255* d_result = nullptr;
+	cudaAssert(cudaMalloc(&d_result, sizeof(color255) * num_pixels));
+
+	////////////////////////////////
+	//                            //
+	//          Render!           //
+	//                            //
+	////////////////////////////////
 
 	int num_blocks = (int)std::ceil(num_pixels / (double)block_size_parameter);
 	int shm_size = 1024 * 48; //48KB
-	//render_kernel<<<num_blocks, block_size_parameter, shm_size>>> ();
+	render_kernel<<<num_blocks, block_size_parameter, shm_size>>> (d_result);
+	cudaAssert(cudaDeviceSynchronize());
+	checkKernelErrors
+
+	cudaAssert(cudaMemcpy(h_result, d_result, num_pixels * sizeof(color255), cudaMemcpyDeviceToHost));
+
+	//P3 image format
+	output_file << "P3\n" << width << ' ' << height << "\n255\n";
+
+	for (int j = 0; j < height; j++) {
+		for (int i = 0; i < width; i++) {
+			int pixel = j * width + i;
+			output_file << (int)h_result[pixel].r() << ' ' << (int)h_result[pixel].g() << ' ' << (int)h_result[pixel].b() << '\n';
+		}
+	}
+
+	std::clog << "\rDone.                                 \n";
 
 	////////////////////////////////
 	//                            //
 	//          Cleanup           //
 	//                            //
 	////////////////////////////////
-
 cleanup:
-	delete h_result;
-
 	output_file.close();
-
+	cudaFree(d_result);
 	cleanup_kernel<<<1, 1>>> ();
+	cudaAssert(cudaDeviceSynchronize());
 
 	return 0;
 }

@@ -1,19 +1,18 @@
 #pragma once
-#include "core.h"
+#include "../core.h"
+#include "vec3.h"
 
-class color_255 {
+class color255 {
 public:
 	char e[3];
 
-	__host__ __device__ color_255() : e{ 0,0,0 } {
-
+	__host__ __device__ void setcolor(char r, char g, char b) {
+		e[0] = r;
+		e[1] = g;
+		e[2] = b;
 	}
 
-	__host__ __device__ color_255(char r, char g, char b) : e{ r, g, b } {
-
-	}
-
-	__host__ __device__ color_255(vec3& c, int samples) {
+	__host__ __device__ void setcolor(vec3& c, int samples) {
 		double r = c.x();
 		double g = c.y();
 		double b = c.z();
@@ -39,7 +38,7 @@ public:
 		e[2] = static_cast<char>(256 * b);
 	}
 
-	__host__ __device__ char x() const { return e[0]; }
-	__host__ __device__ char y() const { return e[1]; }
-	__host__ __device__ char z() const { return e[2]; }
+	__host__ __device__ char r() const { return e[0]; }
+	__host__ __device__ char g() const { return e[1]; }
+	__host__ __device__ char b() const { return e[2]; }
 };

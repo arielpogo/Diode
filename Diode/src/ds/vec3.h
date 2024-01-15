@@ -1,5 +1,5 @@
 #pragma once
-#include "core.h"
+#include "../core.h"
 
 __device__ thrust::minstd_rand* rng;
 __device__ thrust::uniform_real_distribution<float>* random;

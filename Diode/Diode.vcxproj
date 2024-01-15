@@ -55,6 +55,8 @@
     </Link>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
+      <Include>
+      </Include>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -74,6 +76,8 @@
     </Link>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
+      <Include>
+      </Include>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -83,8 +87,11 @@
     <ClInclude Include="src\camera.h" />
     <ClInclude Include="src\ds\color255.h" />
     <ClInclude Include="src\core.h" />
+    <ClInclude Include="src\ds\interval.h" />
     <ClInclude Include="src\ds\material.h" />
     <ClInclude Include="src\ds\object.h" />
+    <ClInclude Include="src\ds\ray.h" />
+    <ClInclude Include="src\render.cuh" />
     <ClInclude Include="src\ds\vec3.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

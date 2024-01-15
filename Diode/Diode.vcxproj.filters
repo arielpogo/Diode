@@ -10,5 +10,8 @@
     <ClInclude Include="src\ds\material.h" />
     <ClInclude Include="src\ds\vec3.h" />
     <ClInclude Include="src\ds\color255.h" />
+    <ClInclude Include="src\render.cuh" />
+    <ClInclude Include="src\ds\ray.h" />
+    <ClInclude Include="src\ds\interval.h" />
   </ItemGroup>
 </Project>
