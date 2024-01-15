@@ -4,6 +4,11 @@
     <CudaCompile Include="src\main.cu" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\Core.h" />
+    <ClInclude Include="src\core.h" />
+    <ClInclude Include="src\ds\object.h" />
+    <ClInclude Include="src\camera.h" />
+    <ClInclude Include="src\ds\material.h" />
+    <ClInclude Include="src\ds\vec3.h" />
+    <ClInclude Include="src\ds\color255.h" />
   </ItemGroup>
 </Project>

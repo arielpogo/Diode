@@ -6,15 +6,17 @@ enum shape {
 };
 
 struct object {
-	object(vec3 _albedo, vec3 _location, material _material, shape _shape) {
+	__device__ object(vec3 _albedo, vec3 _location, material _material, shape _shape, float _radius) {
 		albedo = _albedo;
 		location = _location;
 		material = _material;
 		shape = _shape;
+		radius = _radius;
 	}
 
 	vec3 albedo;
 	vec3 location;
 	material material;
 	shape shape;
+	float radius; //temporary for spheres
 };

@@ -1,8 +1,12 @@
 #pragma once
+#include "core.h"
+
 class camera {
 public:
+	static const int DEFAULT_HEIGHT = 720;
+
 	//image
-	int image_height = 720;
+	int image_height = DEFAULT_HEIGHT;
 	double aspect_ratio = 16.0 / 9.0;
 	double hfov = 90; //horizontal fov in degrees
 
@@ -22,10 +26,6 @@ public:
 	vec3 u, v, w; //camera vectors
 
 	__device__ void initialize() {
-		//calculate width based on aspect ratio and height, for user convenience
-		this->image_width = static_cast<int>(aspect_ratio * image_height);
-		image_width = (image_width < 1) ? 1 : image_width; //no 0px width image
-
 		//viewport, camera
 		camera_center = lookfrom;
 		double focal_length = (lookfrom - lookat).length();
