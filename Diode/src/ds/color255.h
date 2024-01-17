@@ -33,9 +33,14 @@ public:
 		g = (g > max_intensity) ? max_intensity : g;
 		b = (b > max_intensity) ? max_intensity : b;
 
-		e[0] = static_cast<char>(256 * r);
-		e[1] = static_cast<char>(256 * g);
-		e[2] = static_cast<char>(256 * b);
+		e[0] = (char)(256 * r);
+		e[1] = (char)(256 * g);
+		e[2] = (char)(256 * b);
+
+		//e[0] = (e[0] < 0) ? 0 : e[0];
+		//e[1] = (e[1] < 0) ? 0 : e[1];
+		//e[2] = (e[2] < 0) ? 0 : e[2];
+
 	}
 
 	__host__ __device__ char r() const { return e[0]; }

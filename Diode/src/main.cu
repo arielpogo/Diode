@@ -45,8 +45,6 @@ __global__ void init_kernel(time_t random_seed, int height, int width, double as
 		object(vec3(0.5f, 0.5f, 0.5f), vec3(1.0, 0.0, 0), material::metal, shape::sphere, 0.6f)
 	};
 
-	
-
 	printf("[Diode] Global objects initialized\n");
 
 	printf("[Diode] Successful initialization!\n");
@@ -175,6 +173,7 @@ __host__ int main(int argc, char* argv[]) {
 
 	color255* d_result = nullptr;
 	cudaAssert(cudaMalloc(&d_result, sizeof(color255) * num_pixels));
+	//cudaAssert(cudaMemset(d_result, 0, sizeof(color255) * num_pixels));
 
 	////////////////////////////////
 	//                            //
@@ -183,11 +182,11 @@ __host__ int main(int argc, char* argv[]) {
 	////////////////////////////////
 
 	int num_blocks = (int)std::ceil(num_pixels / (double)block_size_parameter);
-	int shm_size = 1024 * 48; //48KB
-	render_kernel<<<num_blocks, block_size_parameter, shm_size>>> (d_result);
+	//int shm_size = 1024 * 48; //48KB
+	render_kernel<<<num_blocks, block_size_parameter>>> (d_result);
 	cudaAssert(cudaDeviceSynchronize());
 	checkKernelErrors
-
+		printf("proceeding...\n");
 	cudaAssert(cudaMemcpy(h_result, d_result, num_pixels * sizeof(color255), cudaMemcpyDeviceToHost));
 
 	//P3 image format
@@ -196,7 +195,10 @@ __host__ int main(int argc, char* argv[]) {
 	for (int j = 0; j < height; j++) {
 		for (int i = 0; i < width; i++) {
 			int pixel = j * width + i;
-			output_file << (int)h_result[pixel].r() << ' ' << (int)h_result[pixel].g() << ' ' << (int)h_result[pixel].b() << '\n';
+			int r = (unsigned char)h_result[pixel].r();
+			int g = (unsigned char)h_result[pixel].g();
+			int b = (unsigned char)h_result[pixel].b();
+			output_file << r << ' ' << g << ' ' << b << '\n';
 		}
 	}
 
