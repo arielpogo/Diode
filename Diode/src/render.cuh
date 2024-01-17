@@ -35,7 +35,7 @@ __global__ void render_kernel(color255* d_result) {
 	}
 	
 	d_result[pixel].setcolor(pixel_color, d_cam->samples_per_pixel);
-	//printf("pixel %d succeeded\n", pixel);
+	//dprintf("pixel %d succeeded\n", pixel);
 }
 
 __device__ vec3 ray_color(const ray& initial_ray, int max_depth) {
@@ -86,12 +86,12 @@ __device__ vec3 ray_color(const ray& initial_ray, int max_depth) {
 			}
 		}
 
-		//sky code
-		//vec3 unit_direction = unit_vector(r.direction());
-		//auto a = 0.5*(unit_direction.y() + 1.0);
-		//return (1.0-a) * color (1,1,1) + a*color(0.5,0.5,0.9);
-
 		else {
+			//sky code
+			//vec3 unit_direction = unit_vector(current_ray.direction());
+			//auto a = 0.5*(unit_direction.y() + 1.0);
+			//final_color = final_color * (1.0 - a)* vec3(1, 1, 1) + a * vec3(0.5, 0.5, 0.9);
+
 			final_color = final_color * vec3(1, 1, 1);
 			break;
 		}
@@ -99,52 +99,6 @@ __device__ vec3 ray_color(const ray& initial_ray, int max_depth) {
 
 	return final_color;
 }
-
-//__device__ vec3 ray_color(const ray& r, int depth) {
-//	if (depth <= 0) return vec3(0, 0, 0); //limit recursion depth with max bounces  
-//
-//	hit_record rec;
-//	bool hit = false;
-//	interval ray_t(0.001, infinity);
-//
-//	float closest_yet = ray_t.max;
-//
-//	for (int i = 0; i < NUM_OBJECTS; i++) {
-//		hit_record temp_rec;
-//		if (d_global_objects[i].hit(r, interval(ray_t.min, closest_yet), temp_rec)) {
-//			hit = true;
-//			closest_yet = temp_rec.t;
-//			rec = temp_rec;
-//		}
-//	}
-//
-//	if (hit) {
-//		ray scattered;
-//		vec3 attenuation;
-//		bool scatter_result = false;
-//		
-//		switch (rec.material) {
-//		case material::lamertian:
-//			scatter_result = lambertian_scatter(r, rec, attenuation, scattered);
-//			break;
-//		case material::metal:
-//			scatter_result = metal_scatter(r, rec, attenuation, scattered);
-//			break;
-//		case material::solid:
-//			scatter_result = solid_scatter(r, rec, attenuation, scattered);
-//			break;
-//		}
-//
-//		if(scatter_result) return attenuation * ray_color(scattered, 0); //some issue with recursion?
-//		else return vec3(0, 0, 0);
-//	}
-//	
-//	//vec3 unit_direction = unit_vector(r.direction());
-//	//auto a = 0.5*(unit_direction.y() + 1.0);
-//	//return (1.0-a) * color (1,1,1) + a*color(0.5,0.5,0.9);
-//	else return vec3(1, 1, 1);
-//
-//}
 
 __device__ ray get_ray(int i, int j) {
 	//get a randomly sampled camera ray for the given pixel

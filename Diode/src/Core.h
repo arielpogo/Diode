@@ -21,6 +21,10 @@ bool debug = false;
 std::string filename = "image";
 std::ofstream output_file;
 
+//Device globals
+__device__ bool d_debug = false;
+
+
 //DEVICE CONSTS
 __constant__ float infinity = NPP_MAXABS_32F; //32 bit float maximum
 __constant__ float PI = 3.1415926535897932385f;
@@ -30,3 +34,4 @@ __constant__ float PI = 3.1415926535897932385f;
 __device__ inline double degrees_to_radians(double degrees) {
 	return degrees * PI / 180.0;
 }
+

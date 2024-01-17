@@ -91,8 +91,10 @@
     <ClInclude Include="src\ds\material.h" />
     <ClInclude Include="src\ds\object.h" />
     <ClInclude Include="src\ds\ray.h" />
+    <ClInclude Include="src\timing.cuh" />
     <ClInclude Include="src\render.cuh" />
     <ClInclude Include="src\ds\vec3.h" />
+    <ClInclude Include="src\vendor\stb_image_write.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

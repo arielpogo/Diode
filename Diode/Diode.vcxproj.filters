@@ -13,5 +13,7 @@
     <ClInclude Include="src\render.cuh" />
     <ClInclude Include="src\ds\ray.h" />
     <ClInclude Include="src\ds\interval.h" />
+    <ClInclude Include="src\timing.cuh" />
+    <ClInclude Include="src\vendor\stb_image_write.h" />
   </ItemGroup>
 </Project>

@@ -1,6 +1,10 @@
 ﻿#include "core.h"
 #include "render.cuh"
 #include "camera.h"
+#include "timing.cuh"
+
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "vendor/stb_image_write.h"
 
 #define cudaAssert(ans) { gpuAssert((ans), __FILE__, __LINE__); }
 inline void gpuAssert(cudaError_t code, const char* file, int line, bool abort = true) {
@@ -23,7 +27,7 @@ __global__ void init_kernel(time_t random_seed, int height, int width, double as
 	//create rng engine
 	rng = new thrust::minstd_rand((uint32_t) random_seed);
 	random = new thrust::uniform_real_distribution<float>(0.0f, 1.0f);
-	printf("[Diode] RNG Engine initialized\n");
+	printf("[Debug] RNG Engine initialized\n");
 
 	//set up camera
 	d_cam = new camera;
@@ -31,23 +35,23 @@ __global__ void init_kernel(time_t random_seed, int height, int width, double as
 	d_cam->image_width = width;
 	d_cam->hfov = 90;
 	d_cam->samples_per_pixel = 10;
-	d_cam->max_bounces = 10;
+	d_cam->max_bounces = 20;
 	d_cam->lookfrom = point3(0, 2, -5);
 	d_cam->lookat = point3(0, 0, 0);
 	d_cam->aspect_ratio = aspect_ratio;
 	d_cam->initialize();
-	printf("[Diode] Camera initialized\n");
+	printf("[Debug] Camera initialized\n");
 
 	//create the global objects
 	d_global_objects = new object [3] {
 		object(vec3(0.5f, 0.5f, 0.5f), vec3(0.0, -100.5, 0), material::lamertian, shape::sphere, 100.0f),
-		object(vec3(0.5f, 0.5f, 0.5f), vec3(-1.0, 0.5, 0), material::lamertian, shape::sphere, 0.5f),
-		object(vec3(0.5f, 0.5f, 0.5f), vec3(1.0, 0.0, 0), material::metal, shape::sphere, 0.6f)
+		object(vec3(1.0f, 0.41f, 0.38f), vec3(-1.0, 0.5, 0), material::lamertian, shape::sphere, 0.5f),
+		object(vec3(0.6f, 0.51f, 0.0f), vec3(1.0, 0.0, 0), material::metal, shape::sphere, 0.6f)
 	};
 
-	printf("[Diode] Global objects initialized\n");
+	printf("[Debug] Global objects initialized\n");
 
-	printf("[Diode] Successful initialization!\n");
+	printf("[Debug] Successful initialization!\n");
 }
 
 __global__ void cleanup_kernel() {
@@ -62,7 +66,7 @@ __global__ void cleanup_kernel() {
 __host__ int main(int argc, char* argv[]) {
 	int height_parameter = 0;
 	int ratio_parameter = 0;
-	std::string filename = "image";
+	char* filename = "image.jpg";
 	int block_size_parameter = 32; //default
 
 	//Handle command line arguments
@@ -99,7 +103,10 @@ __host__ int main(int argc, char* argv[]) {
 					if (i < argc) str = argv[i];
 					else continue;
 
-					if (str[0] != '-') filename.assign(str); //if there is a parameter, assign it to the file name
+					if (str[0] != '-') {
+						strcpy(filename, str); //if there is a parameter, assign it to the file name
+						strcat(filename, ".jpg");
+					}
 					else i--; //otherwise go back to this argument, so the next one is handled
 					break;
 
@@ -127,11 +134,13 @@ __host__ int main(int argc, char* argv[]) {
 		}
 	}
 
-	output_file.open(filename + ".ppm");
-	if (!output_file.is_open()) {
-		std::cerr << "[Diode Error] " << filename << ".ppm" << " could not be opened/created." << std::endl;
-		return 1;
-	}
+	//output_file.open(filename + ".ppm");
+	//if (!output_file.is_open()) {
+	//	std::cerr << "[Debug Error] " << filename << ".ppm" << " could not be opened/created." << std::endl;
+	//	return 1;
+	//}
+
+	std::clog << "block size: " << block_size_parameter << std::endl;
 	
 	////////////////////////////////
 	//                            //
@@ -168,8 +177,7 @@ __host__ int main(int argc, char* argv[]) {
 	cudaAssert(cudaDeviceSynchronize());
 	checkKernelErrors
 
-	color255* h_result = nullptr;
-	cudaAssert(cudaMallocHost(&h_result, sizeof(color255) * num_pixels));
+	color255* h_result = (color255*) STBIW_MALLOC(sizeof(color255)* num_pixels);
 
 	color255* d_result = nullptr;
 	cudaAssert(cudaMalloc(&d_result, sizeof(color255) * num_pixels));
@@ -182,25 +190,32 @@ __host__ int main(int argc, char* argv[]) {
 	////////////////////////////////
 
 	int num_blocks = (int)std::ceil(num_pixels / (double)block_size_parameter);
-	//int shm_size = 1024 * 48; //48KB
+	printf("num blocks: %d\n", num_blocks);
+
+	TIMING_START();
 	render_kernel<<<num_blocks, block_size_parameter>>> (d_result);
 	cudaAssert(cudaDeviceSynchronize());
+	TIMING_STOP();
 	checkKernelErrors
-		printf("proceeding...\n");
+
+	TIMING_PRINT();
+	printf("proceeding...\n");
 	cudaAssert(cudaMemcpy(h_result, d_result, num_pixels * sizeof(color255), cudaMemcpyDeviceToHost));
 
-	//P3 image format
-	output_file << "P3\n" << width << ' ' << height << "\n255\n";
+	stbi_write_jpg(filename, width, height, 3, h_result, 100);
 
-	for (int j = 0; j < height; j++) {
-		for (int i = 0; i < width; i++) {
-			int pixel = j * width + i;
-			int r = (unsigned char)h_result[pixel].r();
-			int g = (unsigned char)h_result[pixel].g();
-			int b = (unsigned char)h_result[pixel].b();
-			output_file << r << ' ' << g << ' ' << b << '\n';
-		}
-	}
+	////P3 image format
+	//output_file << "P3\n" << width << ' ' << height << "\n255\n";
+
+	//for (int j = 0; j < height; j++) {
+	//	for (int i = 0; i < width; i++) {
+	//		int pixel = j * width + i;
+	//		int r = (unsigned char)h_result[pixel].r();
+	//		int g = (unsigned char)h_result[pixel].g();
+	//		int b = (unsigned char)h_result[pixel].b();
+	//		output_file << r << ' ' << g << ' ' << b << '\n';
+	//	}
+	//}
 
 	std::clog << "\rDone.                                 \n";
 
@@ -210,7 +225,7 @@ __host__ int main(int argc, char* argv[]) {
 	//                            //
 	////////////////////////////////
 cleanup:
-	output_file.close();
+	//output_file.close();
 	cudaFree(d_result);
 	cleanup_kernel<<<1, 1>>> ();
 	cudaAssert(cudaDeviceSynchronize());
